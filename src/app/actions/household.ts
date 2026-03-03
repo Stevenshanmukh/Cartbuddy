@@ -16,6 +16,7 @@ export async function createHousehold(formData: FormData) {
     // 1. Sign in anonymously
     const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
     if (authError || !authData.user) {
+        console.error('Anonymous Auth Error:', authError)
         return { error: 'Failed to create account. Please try again.' }
     }
 
@@ -27,6 +28,7 @@ export async function createHousehold(formData: FormData) {
         .insert({ id: userId, name: userName.trim() })
 
     if (profileError) {
+        console.error('Profile Creation Error:', profileError)
         return { error: 'Failed to create profile.' }
     }
 
@@ -38,6 +40,7 @@ export async function createHousehold(formData: FormData) {
         .single()
 
     if (householdError || !household) {
+        console.error('Household Creation Error:', householdError)
         return { error: 'Failed to create household.' }
     }
 
@@ -51,6 +54,7 @@ export async function createHousehold(formData: FormData) {
         })
 
     if (memberError) {
+        console.error('Member Add Error:', memberError)
         return { error: 'Failed to join household.' }
     }
 
@@ -80,6 +84,7 @@ export async function joinHousehold(inviteCode: string, formData: FormData) {
     // 2. Sign in anonymously
     const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
     if (authError || !authData.user) {
+        console.error('Anonymous Auth Error (Join):', authError)
         return { error: 'Failed to create account. Please try again.' }
     }
 
