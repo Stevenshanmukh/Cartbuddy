@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: initialize project\n\nMobile-first PWA for roommates to share shopping lists in real time, organized by store.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "WebSearch",
+      "Bash(git check-ignore -q C:UserssteveDownloadsCartbuddy.planning)"
+    ]
+  }
+}
