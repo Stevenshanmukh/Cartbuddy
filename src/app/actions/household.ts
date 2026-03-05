@@ -51,7 +51,7 @@ export async function createHousehold(formData: FormData) {
     })
 
     revalidatePath('/households')
-    redirect('/households')
+    return { success: true, id: household.id }
 }
 
 export async function joinHouseholdByInvite(token: string) {

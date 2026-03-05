@@ -46,6 +46,10 @@ export function HouseholdsDashboard({ households, userName, userEmail }: Househo
         if (result?.error) {
             setError(result.error)
             setLoading(false)
+        } else if (result?.success && result?.id) {
+            setShowCreate(false)
+            setLoading(false)
+            handleSelectHousehold(result.id)
         }
     }
 
