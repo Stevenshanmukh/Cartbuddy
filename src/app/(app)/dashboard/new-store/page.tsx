@@ -2,65 +2,54 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useHousehold } from '@/contexts/household-context'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 export default function NewStorePage() {
     const [name, setName] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+    const queryClient = useQueryClient()
+    const { activeHouseholdId } = useHousehold()
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
-        if (!name.trim()) return
+        if (!name.trim() || !activeHouseholdId) return
 
         setLoading(true)
         setError(null)
 
         const supabase = createClient()
-
-        // Get user's household
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: membership } = await supabase
-            .from('household_members')
-            .select('household_id')
-            .eq('user_id', user.id)
-            .single()
-
-        if (!membership) return
-
         const { error: insertError } = await supabase
             .from('stores')
             .insert({
-                household_id: membership.household_id,
                 name: name.trim(),
+                household_id: activeHouseholdId,
             })
 
         if (insertError) {
-            setError('Failed to create store')
+            setError('Failed to create store.')
             setLoading(false)
             return
         }
 
         // Log activity
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
-            .single()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            await supabase.from('activity_logs').insert({
+                household_id: activeHouseholdId,
+                user_id: user.id,
+                action: 'store_created',
+                store_name: name.trim(),
+            })
+        }
 
-        await supabase.from('activity_logs').insert({
-            household_id: membership.household_id,
-            user_id: user.id,
-            action: 'store_created',
-            store_name: name.trim(),
-            metadata: { created_by_name: profile?.name },
-        })
-
+        // Invalidate the stores query so dashboard shows the new store immediately
+        await queryClient.invalidateQueries({ queryKey: ['stores', activeHouseholdId] })
         router.push('/dashboard')
-        router.refresh()
     }
 
     return (
@@ -75,12 +64,12 @@ export default function NewStorePage() {
                     <input
                         id="storeName"
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Walmart, Costco, Target"
                         required
                         autoFocus
                         maxLength={50}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Walmart, Costco"
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-gray-900 placeholder:text-gray-400"
                     />
                 </div>
@@ -91,18 +80,21 @@ export default function NewStorePage() {
 
                 <div className="flex gap-3">
                     <button
-                        type="button"
-                        onClick={() => router.back()}
-                        className="flex-1 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
                         type="submit"
                         disabled={loading || !name.trim()}
-                        className="flex-1 py-3 bg-blue-500 text-white font-medium rounded-xl shadow-sm hover:bg-blue-600 active:scale-[0.98] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        className={cn(
+                            'flex-1 py-3 font-semibold rounded-xl transition-all text-white',
+                            loading || !name.trim() ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98]'
+                        )}
                     >
                         {loading ? 'Creating…' : 'Create Store'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => router.back()}
+                        className="px-6 py-3 text-sm text-gray-500 hover:text-gray-700 font-medium"
+                    >
+                        Cancel
                     </button>
                 </div>
             </form>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
  */
 export function useRealtimeItems(storeId: string) {
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
 
     useEffect(() => {
         const channel = supabase
@@ -71,7 +71,7 @@ export function useRealtimeItems(storeId: string) {
  */
 export function useRealtimeStores(householdId: string) {
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
 
     useEffect(() => {
         const channel = supabase
@@ -102,7 +102,7 @@ export function useRealtimeStores(householdId: string) {
  */
 export function useRealtimeActivity(householdId: string) {
     const queryClient = useQueryClient()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
 
     useEffect(() => {
         const channel = supabase

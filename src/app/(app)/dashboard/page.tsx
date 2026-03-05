@@ -1,55 +1,78 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useHousehold } from '@/contexts/household-context'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useRealtimeStores } from '@/hooks/use-realtime'
+import { useMemo, useState } from 'react'
+import { CreateStoreSheet } from '@/components/dashboard/create-store-sheet'
 
-export default async function DashboardPage() {
-    const supabase = await createClient()
+export default function DashboardPage() {
+    const { activeHouseholdId } = useHousehold()
+    const supabase = useMemo(() => createClient(), [])
+    const router = useRouter()
+    const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/')
+    // Subscribe to realtime store changes
+    useRealtimeStores(activeHouseholdId || '')
 
-    // Get user's household
-    const { data: membership } = await supabase
-        .from('household_members')
-        .select('household_id')
-        .eq('user_id', user.id)
-        .single()
+    const { data: storeCounts = [], isLoading } = useQuery({
+        queryKey: ['stores', activeHouseholdId],
+        queryFn: async () => {
+            if (!activeHouseholdId) return []
 
-    if (!membership) redirect('/')
+            // Get stores
+            const { data: stores } = await supabase
+                .from('stores')
+                .select('id, name, created_at')
+                .eq('household_id', activeHouseholdId)
+                .order('created_at', { ascending: true })
 
-    // Get stores with item counts
-    const { data: stores } = await supabase
-        .from('stores')
-        .select('id, name, created_at')
-        .eq('household_id', membership.household_id)
-        .order('created_at', { ascending: true })
+            if (!stores || stores.length === 0) return []
 
-    // Get active item counts per store
-    const { data: items } = await supabase
-        .from('items')
-        .select('store_id, status')
-        .in('store_id', (stores || []).map(s => s.id))
+            // Get active item counts per store
+            const { data: items } = await supabase
+                .from('items')
+                .select('store_id, status')
+                .in('store_id', stores.map(s => s.id))
 
-    const storeCounts = (stores || []).map(store => {
-        const storeItems = (items || []).filter(i => i.store_id === store.id)
-        const activeCount = storeItems.filter(i => i.status === 'active').length
-        const checkedCount = storeItems.filter(i => i.status === 'checked').length
-        return { ...store, activeCount, checkedCount }
+            return stores.map(store => {
+                const storeItems = (items || []).filter(i => i.store_id === store.id)
+                const activeCount = storeItems.filter(i => i.status === 'active').length
+                const checkedCount = storeItems.filter(i => i.status === 'checked').length
+                return { ...store, activeCount, checkedCount }
+            })
+        },
+        enabled: !!activeHouseholdId,
     })
+
+    if (isLoading) {
+        return (
+            <div className="px-4 py-6">
+                <div className="animate-pulse space-y-3">
+                    <div className="h-8 bg-gray-200 rounded w-24" />
+                    <div className="h-20 bg-gray-100 rounded-2xl" />
+                    <div className="h-20 bg-gray-100 rounded-2xl" />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="px-4 py-6">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Stores</h2>
-                <Link
-                    href="/dashboard/new-store"
+                <button
+                    onClick={() => setIsCreateSheetOpen(true)}
                     className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-500 text-white font-medium rounded-xl text-sm shadow-sm hover:bg-blue-600 active:scale-[0.97] transition-all"
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                     Add Store
-                </Link>
+                </button>
             </div>
 
             {storeCounts.length === 0 ? (
@@ -83,12 +106,16 @@ export default async function DashboardPage() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <a
-                                        href={`/shop/${store.id}`}
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            router.push(`/shop/${store.id}`)
+                                        }}
                                         className="px-3 py-1.5 bg-green-50 text-green-600 font-medium rounded-lg text-sm hover:bg-green-100 transition-colors relative z-10"
                                     >
                                         Shop
-                                    </a>
+                                    </button>
                                     <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                     </svg>
@@ -98,6 +125,11 @@ export default async function DashboardPage() {
                     ))}
                 </div>
             )}
+
+            <CreateStoreSheet
+                isOpen={isCreateSheetOpen}
+                onOpenChange={setIsCreateSheetOpen}
+            />
         </div>
     )
 }

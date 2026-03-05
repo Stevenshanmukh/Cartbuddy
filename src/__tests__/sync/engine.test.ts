@@ -19,6 +19,7 @@ vi.mock('@/lib/sync/queue', () => {
             queue = queue.filter(m => m.id !== id)
             return Promise.resolve()
         }),
+        updateMutationRetries: vi.fn(() => Promise.resolve()),
         __setQueue: (q: any[]) => { queue = [...q] },
         __getQueue: () => [...queue],
     }

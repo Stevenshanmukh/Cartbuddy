@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface PresenceState {
@@ -12,13 +12,16 @@ interface PresenceState {
 }
 
 export function usePresence(householdId: string, userId: string, userName: string) {
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
     const [onlineMembers, setOnlineMembers] = useState<PresenceState[]>([])
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
     useEffect(() => {
         const channel = supabase.channel(`presence:${householdId}`, {
             config: { presence: { key: userId } },
         })
+
+        channelRef.current = channel
 
         channel
             .on('presence', { event: 'sync' }, () => {
@@ -53,31 +56,32 @@ export function usePresence(householdId: string, userId: string, userName: strin
             })
 
         return () => {
+            channelRef.current = null
             supabase.removeChannel(channel)
         }
     }, [householdId, userId, userName, supabase])
 
     const startShopping = useCallback(async (storeId: string) => {
-        const channel = supabase.channel(`presence:${householdId}`)
-        await channel.track({
+        if (!channelRef.current) return
+        await channelRef.current.track({
             userId,
             userName,
             status: 'shopping',
             shoppingStoreId: storeId,
             lastSeen: new Date().toISOString(),
         })
-    }, [householdId, userId, userName, supabase])
+    }, [userId, userName])
 
     const stopShopping = useCallback(async () => {
-        const channel = supabase.channel(`presence:${householdId}`)
-        await channel.track({
+        if (!channelRef.current) return
+        await channelRef.current.track({
             userId,
             userName,
             status: 'online',
             shoppingStoreId: null,
             lastSeen: new Date().toISOString(),
         })
-    }, [householdId, userId, userName, supabase])
+    }, [userId, userName])
 
     return {
         onlineMembers,

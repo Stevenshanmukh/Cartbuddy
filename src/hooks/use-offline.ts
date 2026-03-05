@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { processQueue } from '@/lib/sync/engine'
 import { getPendingCount } from '@/lib/sync/queue'
 
@@ -8,6 +8,7 @@ export function useOffline() {
     const [isOnline, setIsOnline] = useState(true)
     const [pendingCount, setPendingCount] = useState(0)
     const [isSyncing, setIsSyncing] = useState(false)
+    const isSyncingRef = useRef(false)
 
     // Track online/offline status
     useEffect(() => {
@@ -52,23 +53,21 @@ export function useOffline() {
     }, [])
 
     const syncQueue = useCallback(async () => {
-        if (isSyncing || !isOnline) return
+        if (isSyncingRef.current || !navigator.onLine) return
 
+        isSyncingRef.current = true
         setIsSyncing(true)
         try {
             const result = await processQueue()
             const count = await getPendingCount()
             setPendingCount(count)
-
-            if (result.synced > 0) {
-                console.log(`[Sync] Synced ${result.synced} mutations`)
-            }
         } catch (error) {
             console.error('[Sync] Queue processing failed:', error)
         } finally {
+            isSyncingRef.current = false
             setIsSyncing(false)
         }
-    }, [isSyncing, isOnline])
+    }, [])
 
     return {
         isOnline,

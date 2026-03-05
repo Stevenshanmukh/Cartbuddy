@@ -1,14 +1,23 @@
 {
-  "name": "cartbuddy-temp",
-  "version": "0.1.0",
+  "name": "cartbuddy",
+  "version": "1.0.0",
   "private": true,
+  "description": "Real-time collaborative shopping lists for households — Next.js + Supabase PWA",
+  "author": "Stevenshanmukh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Stevenshanmukh/Cartbuddy"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui"
   },
   "dependencies": {
@@ -17,9 +26,13 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.90.21",
+    "@types/canvas-confetti": "^1.9.0",
+    "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.34.5",
     "idb": "^8.0.3",
+    "lucide-react": "^0.576.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

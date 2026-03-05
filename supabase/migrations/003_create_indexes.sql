@@ -23,5 +23,6 @@ CREATE INDEX idx_items_created_by ON items(created_by);
 CREATE INDEX idx_activity_logs_household_id ON activity_logs(household_id);
 CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at DESC);
 
--- Invite code lookups (join flow)
-CREATE INDEX idx_households_invite_code ON households(invite_code);
+-- Invite token lookups (join flow)
+CREATE INDEX idx_invites_token ON invites(token);
+CREATE INDEX idx_invites_household_id ON invites(household_id);

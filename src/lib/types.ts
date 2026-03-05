@@ -1,5 +1,5 @@
-// Database types — will be replaced with auto-generated types from Supabase CLI
-// For now, manually typed to match our schema
+// Database types — matches our multi-tenant schema
+// Tables: profiles, households, household_members, invites, stores, categories, items, activity_logs
 
 export type Database = {
     public: {
@@ -8,16 +8,19 @@ export type Database = {
                 Row: {
                     id: string
                     name: string
+                    avatar_url: string | null
                     created_at: string
                 }
                 Insert: {
                     id: string
                     name: string
+                    avatar_url?: string | null
                     created_at?: string
                 }
                 Update: {
                     id?: string
                     name?: string
+                    avatar_url?: string | null
                     created_at?: string
                 }
             }
@@ -25,21 +28,18 @@ export type Database = {
                 Row: {
                     id: string
                     name: string
-                    invite_code: string
                     created_by: string
                     created_at: string
                 }
                 Insert: {
                     id?: string
                     name?: string
-                    invite_code?: string
                     created_by: string
                     created_at?: string
                 }
                 Update: {
                     id?: string
                     name?: string
-                    invite_code?: string
                     created_by?: string
                     created_at?: string
                 }
@@ -49,22 +49,57 @@ export type Database = {
                     id: string
                     household_id: string
                     user_id: string
-                    role: 'owner' | 'member'
+                    role: 'owner' | 'admin' | 'member'
                     joined_at: string
                 }
                 Insert: {
                     id?: string
                     household_id: string
                     user_id: string
-                    role?: 'owner' | 'member'
+                    role?: 'owner' | 'admin' | 'member'
                     joined_at?: string
                 }
                 Update: {
                     id?: string
                     household_id?: string
                     user_id?: string
-                    role?: 'owner' | 'member'
+                    role?: 'owner' | 'admin' | 'member'
                     joined_at?: string
+                }
+            }
+            invites: {
+                Row: {
+                    id: string
+                    household_id: string
+                    token: string
+                    created_by: string
+                    expires_at: string | null
+                    max_uses: number | null
+                    use_count: number
+                    is_active: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    household_id: string
+                    token?: string
+                    created_by: string
+                    expires_at?: string | null
+                    max_uses?: number | null
+                    use_count?: number
+                    is_active?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    household_id?: string
+                    token?: string
+                    created_by?: string
+                    expires_at?: string | null
+                    max_uses?: number | null
+                    use_count?: number
+                    is_active?: boolean
+                    created_at?: string
                 }
             }
             stores: {
@@ -191,6 +226,7 @@ export type Database = {
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Household = Database['public']['Tables']['households']['Row']
 export type HouseholdMember = Database['public']['Tables']['household_members']['Row']
+export type Invite = Database['public']['Tables']['invites']['Row']
 export type Store = Database['public']['Tables']['stores']['Row']
 export type Category = Database['public']['Tables']['categories']['Row']
 export type Item = Database['public']['Tables']['items']['Row']
@@ -208,6 +244,12 @@ export type MemberWithProfile = HouseholdMember & {
 
 export type StoreWithItemCount = Store & {
     item_count: number
+}
+
+// Household with membership context
+export type HouseholdWithMembership = Household & {
+    role: 'owner' | 'admin' | 'member'
+    member_count: number
 }
 
 // Presence types

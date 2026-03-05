@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 interface UndoToastProps {
@@ -13,6 +13,10 @@ interface UndoToastProps {
 export function UndoToast({ message, onUndo, duration = 5000, onTimeout }: UndoToastProps) {
     const [progress, setProgress] = useState(100)
     const [visible, setVisible] = useState(true)
+    const onTimeoutRef = useRef(onTimeout)
+    useEffect(() => {
+        onTimeoutRef.current = onTimeout
+    }, [onTimeout])
 
     useEffect(() => {
         const startTime = Date.now()
@@ -23,12 +27,12 @@ export function UndoToast({ message, onUndo, duration = 5000, onTimeout }: UndoT
             if (remaining <= 0) {
                 clearInterval(interval)
                 setVisible(false)
-                onTimeout()
+                onTimeoutRef.current()
             }
         }, 50)
 
         return () => clearInterval(interval)
-    }, [duration, onTimeout])
+    }, [duration])
 
     const handleUndo = useCallback(() => {
         setVisible(false)

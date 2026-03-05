@@ -1,72 +1,80 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useHousehold } from '@/contexts/household-context'
+import { useRealtimeActivity } from '@/hooks/use-realtime'
 import { timeAgo } from '@/lib/utils'
 
-export default async function ActivityPage() {
-    const supabase = await createClient()
+const actionLabels: Record<string, (a: any) => string> = {
+    item_added: (a) => `added "${a?.item_name || a?.metadata?.item_name || 'an item'}"`,
+    item_checked: (a) => `checked off "${a?.item_name || a?.metadata?.item_name || 'an item'}"`,
+    item_unchecked: (a) => `unchecked "${a?.item_name || a?.metadata?.item_name || 'an item'}"`,
+    item_deleted: (a) => `removed "${a?.item_name || a?.metadata?.item_name || 'an item'}"`,
+    item_edited: (a) => `edited "${a?.item_name || a?.metadata?.item_name || 'an item'}"`,
+    items_archived: (a) => `archived checked items${a?.store_name || a?.metadata?.store_name ? ` at ${a.store_name || a.metadata.store_name}` : ''}`,
+    store_created: (a) => `created "${a?.store_name || a?.metadata?.store_name || 'a store'}"`,
+    store_deleted: (a) => `deleted "${a?.store_name || a?.metadata?.store_name || 'a store'}"`,
+    member_joined: () => `joined the household`,
+    member_left: () => `left the household`,
+    shopping_started: (a) => `started shopping at "${a?.store_name || a?.metadata?.store_name || 'a store'}"`,
+    shopping_ended: () => `finished shopping`,
+}
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/')
+export default function ActivityPage() {
+    const { activeHouseholdId } = useHousehold()
+    const supabase = useMemo(() => createClient(), [])
 
-    const { data: membership } = await supabase
-        .from('household_members')
-        .select('household_id')
-        .eq('user_id', user.id)
-        .single()
+    useRealtimeActivity(activeHouseholdId || '')
 
-    if (!membership) redirect('/')
+    const { data: activities, isLoading } = useQuery({
+        queryKey: ['activity', activeHouseholdId],
+        queryFn: async () => {
+            if (!activeHouseholdId) return []
 
-    // Fetch activity logs
-    const { data: activities } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .eq('household_id', membership.household_id)
-        .order('created_at', { ascending: false })
-        .limit(50)
+            const { data, error } = await supabase
+                .from('activity_logs')
+                .select('*, profiles:user_id(name)')
+                .eq('household_id', activeHouseholdId)
+                .order('created_at', { ascending: false })
+                .limit(50)
 
-    // Fetch profiles for activity users
-    const userIds = [...new Set((activities || []).map(a => a.user_id))]
-    const { data: profiles } = userIds.length > 0
-        ? await supabase.from('profiles').select('id, name').in('id', userIds)
-        : { data: [] }
-
-    const profileMap = new Map((profiles || []).map(p => [p.id, p.name]))
-
-    const actionLabels: Record<string, (meta: any) => string> = {
-        item_added: (m) => `added "${m?.item_name || 'an item'}"`,
-        item_checked: (m) => `checked off "${m?.item_name || 'an item'}"`,
-        item_unchecked: (m) => `unchecked "${m?.item_name || 'an item'}"`,
-        item_deleted: (m) => `removed "${m?.item_name || 'an item'}"`,
-        item_edited: (m) => `edited "${m?.item_name || 'an item'}"`,
-        items_archived: () => 'archived checked items',
-        store_created: (m) => `created "${m?.store_name || 'a store'}"`,
-        store_deleted: (m) => `deleted "${m?.store_name || 'a store'}"`,
-        member_joined: (m) => `joined the household`,
-        member_left: () => `left the household`,
-        shopping_started: (m) => `started shopping at "${m?.store_name || 'a store'}"`,
-        shopping_ended: () => `finished shopping`,
-    }
+            if (error) throw error
+            return data
+        },
+        enabled: !!activeHouseholdId,
+    })
 
     return (
         <div className="px-4 py-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Activity</h2>
 
-            {(!activities || activities.length === 0) ? (
-                <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">No activity yet</h3>
-                    <p className="text-gray-500 text-sm">Activity will show up once items are added</p>
+            {isLoading ? (
+                <div className="space-y-4 animate-pulse">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex gap-3 py-3 border-b border-gray-100 last:border-0">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                                <div className="h-3 bg-gray-200 rounded w-1/4" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (!activities || activities.length === 0) ? (
+                <div className="text-center py-16 text-gray-500">
+                    <p>No activity yet.</p>
                 </div>
             ) : (
                 <div className="space-y-1">
                     {activities.map((activity) => {
-                        const userName = profileMap.get(activity.user_id) || 'Someone'
+                        // Support both single object and array return forms from Supabase join
+                        const profilesData = Array.isArray(activity.profiles) ? activity.profiles[0] : activity.profiles
+                        const userName = profilesData?.name || 'Someone'
                         const actionFn = actionLabels[activity.action]
-                        const label = actionFn ? actionFn(activity.metadata) : activity.action
+                        const label = actionFn ? actionFn(activity) : activity.action
 
                         return (
                             <div

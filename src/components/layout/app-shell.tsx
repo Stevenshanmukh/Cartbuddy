@@ -1,31 +1,43 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useOffline } from '@/hooks/use-offline'
+import { useHousehold } from '@/contexts/household-context'
+import { signOut } from '@/app/actions/household'
+import { PageTransition } from '@/components/ui/page-transition'
+import { motion } from 'framer-motion'
+import type { HouseholdWithMembership } from '@/lib/types'
 
 interface AppShellProps {
     userId: string
     userName: string
-    householdId: string
-    householdName: string
-    inviteCode: string
-    isOwner: boolean
+    userEmail: string
+    households: HouseholdWithMembership[]
     children: React.ReactNode
 }
+
+const roleBadgeColors = {
+    owner: 'bg-amber-100 text-amber-700',
+    admin: 'bg-blue-100 text-blue-700',
+    member: 'bg-gray-100 text-gray-600',
+} as const
 
 export function AppShell({
     userId,
     userName,
-    householdId,
-    householdName,
-    inviteCode,
-    isOwner,
+    userEmail,
+    households,
     children,
 }: AppShellProps) {
     const pathname = usePathname()
+    const router = useRouter()
     const { isOnline, pendingCount } = useOffline()
+    const { activeHousehold, setActiveHouseholdId } = useHousehold()
+    const [showSwitcher, setShowSwitcher] = useState(false)
+    const [showUserMenu, setShowUserMenu] = useState(false)
 
     const navItems = [
         {
@@ -58,6 +70,13 @@ export function AppShell({
         },
     ]
 
+    function handleSwitchHousehold(id: string) {
+        setActiveHouseholdId(id)
+        setShowSwitcher(false)
+        router.push('/dashboard')
+        router.refresh()
+    }
+
     return (
         <div className="min-h-dvh bg-gray-50 flex flex-col">
             {/* Offline Banner */}
@@ -74,21 +93,113 @@ export function AppShell({
 
             {/* Header */}
             <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-                <div>
+                {/* Household Switcher */}
+                <button
+                    onClick={() => setShowSwitcher(!showSwitcher)}
+                    className="flex items-center gap-2 hover:bg-gray-50 rounded-xl px-2 py-1 -ml-2 transition-colors"
+                >
                     <h1 className="font-bold text-gray-900 text-lg leading-tight">
-                        {householdName}
+                        {activeHousehold?.name || 'CartBuddy'}
                     </h1>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    {households.length > 1 && (
+                        <svg className={cn("w-4 h-4 text-gray-400 transition-transform", showSwitcher && "rotate-180")} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    )}
+                </button>
+
+                {/* User Avatar / Menu */}
+                <div className="relative">
+                    <button
+                        onClick={() => setShowUserMenu(!showUserMenu)}
+                        className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                    >
                         {userName.charAt(0).toUpperCase()}
-                    </div>
+                    </button>
+
+                    {/* User dropdown */}
+                    {showUserMenu && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                                <div className="px-4 py-2 border-b border-gray-100">
+                                    <p className="font-medium text-gray-900 text-sm">{userName}</p>
+                                    <p className="text-xs text-gray-500">{userEmail}</p>
+                                </div>
+                                <Link
+                                    href="/households"
+                                    className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                    onClick={() => setShowUserMenu(false)}
+                                >
+                                    🏠 All Households
+                                </Link>
+                                <button
+                                    onClick={() => signOut()}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                    Sign Out
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </header>
 
+            {/* Household Switcher Dropdown */}
+            {showSwitcher && (
+                <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowSwitcher(false)} />
+                    <div className="absolute left-4 right-4 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-25 max-h-80 overflow-y-auto">
+                        {households.map((h) => (
+                            <button
+                                key={h.id}
+                                onClick={() => handleSwitchHousehold(h.id)}
+                                className={cn(
+                                    'w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors',
+                                    h.id === activeHousehold?.id && 'bg-blue-50'
+                                )}
+                            >
+                                <div>
+                                    <p className={cn(
+                                        'font-medium text-sm',
+                                        h.id === activeHousehold?.id ? 'text-blue-700' : 'text-gray-900'
+                                    )}>
+                                        {h.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {h.member_count} member{h.member_count !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full capitalize', roleBadgeColors[h.role])}>
+                                        {h.role}
+                                    </span>
+                                    {h.id === activeHousehold?.id && (
+                                        <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+                        <div className="border-t border-gray-100 mt-1 pt-1">
+                            <Link
+                                href="/households"
+                                className="block px-4 py-2.5 text-sm text-blue-600 font-medium hover:bg-blue-50 transition-colors"
+                                onClick={() => setShowSwitcher(false)}
+                            >
+                                Manage Households →
+                            </Link>
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* Content */}
             <main className="flex-1 pb-20">
-                {children}
+                <PageTransition>
+                    {children}
+                </PageTransition>
             </main>
 
             {/* Bottom Navigation */}
@@ -101,12 +212,20 @@ export function AppShell({
                                 key={item.href}
                                 href={item.href}
                                 className={cn(
-                                    'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
+                                    'relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px] z-10',
                                     isActive
                                         ? 'text-blue-600'
                                         : 'text-gray-400 hover:text-gray-600'
                                 )}
                             >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="bottomNavIndicator"
+                                        className="absolute inset-0 bg-blue-50 rounded-xl"
+                                        style={{ zIndex: -1 }}
+                                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                                    />
+                                )}
                                 {item.icon}
                                 <span className="text-[11px] font-medium">{item.label}</span>
                             </Link>

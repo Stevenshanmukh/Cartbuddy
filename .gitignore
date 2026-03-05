@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+test-output.*
+test-results*
+tsc-errors.*
 
 # next.js
 /.next/
@@ -30,8 +33,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +43,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI tool dirs
+.claude/
+.planning/
+
+# Supabase temp
+supabase/.temp/
+
+# IDE
+.idea/
+.vscode/
+*.swp

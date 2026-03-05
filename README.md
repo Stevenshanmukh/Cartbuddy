@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛒 CartBuddy
 
-## Getting Started
+**Real-time collaborative shopping lists for households.**
 
-First, run the development server:
+CartBuddy is a mobile-first PWA that lets roommates, families, and households manage shared shopping lists in real-time. Add items from anywhere, see who's shopping live, and never buy duplicates again.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 📸 Screenshots
+
+*Placeholder for application screenshots. Replace the images in `public/screenshots/` before publishing.*
+
+<details>
+<summary>View Gallery</summary>
+
+| Login & Auth | Household Dashboard |
+|:---:|:---:|
+| <img src="public/screenshots/login.png" width="400" alt="Login screen" /> | <img src="public/screenshots/household.png" width="400" alt="Household Dashboard" /> |
+
+| Store Items | Active Shopping |
+|:---:|:---:|
+| <img src="public/screenshots/items.png" width="400" alt="Store Items" /> | <img src="public/screenshots/shopping.png" width="400" alt="Active Shopping Mode" /> |
+
+| Add Item Quick-Action | Activity Feed |
+|:---:|:---:|
+| <img src="public/screenshots/add-item.png" width="400" alt="Add Item Sheet" /> | <img src="public/screenshots/activity.png" width="400" alt="Live Activity Feed" /> |
+
+</details>
+
+---
+
+## ✨ Features
+
+- **Real-time sync** — Changes appear instantly across all household members
+- **Live presence** — See who's currently shopping and at which store
+- **Offline support** — Add items without internet, auto-syncs when back online
+- **Multi-household** — Manage multiple households from one account
+- **Smart quick-add** — Type `2x Milk` to auto-parse quantity
+- **Undo actions** — 5-second undo toast for check/delete operations
+- **Activity feed** — See who added, checked, or removed items
+- **Invite system** — Share a link to invite household members
+- **Installable PWA** — Add to home screen for native app experience
+
+## 🏗 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | Next.js 16 (App Router) |
+| **Database** | Supabase (PostgreSQL + Realtime + Auth) |
+| **State** | Zustand + React Query + Context API |
+| **Styling** | Tailwind CSS 4 |
+| **Validation** | Zod (client + server) |
+| **Testing** | Vitest + Testing Library |
+| **Offline** | IndexedDB queue + Service Worker (Serwist) |
+| **UI** | Framer Motion + Lucide Icons + Vaul Drawer |
+| **CI/CD** | GitHub Actions |
+
+## 🏛 Architecture
+
+```
+Client (React)  →  Server Actions (Next.js)  →  Supabase (PostgreSQL)
+     ↕                                               ↕
+  IndexedDB                                    Realtime Channels
+  (offline queue)                              (live sync + presence)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Key patterns:**
+- **Optimistic UI** — Items update instantly, roll back on error
+- **Offline-first** — Mutations queue in IndexedDB, replay when online
+- **Multi-tenant** — Row Level Security isolates household data
+- **Atomic operations** — Ownership transfer uses PostgreSQL transactions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Quick Start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
+- Node.js 20+
+- A [Supabase](https://supabase.com) project
 
-## Learn More
+### Setup
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# 1. Clone and install
+git clone https://github.com/Stevenshanmukh/Cartbuddy.git
+cd Cartbuddy
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 2. Configure environment
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 3. Set up database
+# Run the SQL files in supabase/migrations/ (001 through 006) in your Supabase SQL Editor
 
-## Deploy on Vercel
+# 4. Start dev server
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000) to use the app.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔐 Environment Variables
+
+```bash
+# Required
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+See [`.env.example`](.env.example) for the full template.
+
+## 🗄 Database Setup
+
+Run these migrations in order in the Supabase SQL Editor:
+
+| # | File | Purpose |
+|---|------|---------|
+| 1 | `001_create_tables.sql` | Core schema (profiles, households, items, etc.) |
+| 2 | `002_enable_rls.sql` | Row Level Security policies |
+| 3 | `003_create_indexes.sql` | Performance indexes |
+| 4 | `004_seed_categories.sql` | Default shopping categories |
+| 5 | `005_transfer_ownership_rpc.sql` | Atomic ownership transfer + invite count |
+| 6 | `006_fix_invite_rls.sql` | Invite lookup policy |
+
+## 🧪 Testing
+
+```bash
+npm run test              # Run all tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
+npm run type-check        # TypeScript strict check
+npm run lint              # ESLint
+```
+
+## 📁 Project Structure
+
+See [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) for the full annotated directory tree.
+
+## 🤝 Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
+
+## 📄 License
+
+[MIT](LICENSE)

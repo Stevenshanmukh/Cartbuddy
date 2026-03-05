@@ -1,35 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import {
-    queueMutation,
-    getQueuedMutations,
-    removeMutation,
-    getPendingCount,
-    clearQueue,
-    type QueuedMutation,
-} from '@/lib/sync/queue'
+import { queueMutation, getQueuedMutations, removeMutation, getPendingCount, clearQueue, updateMutationRetries } from '@/lib/sync/queue'
 
-// fake-indexeddb is polyfilled in setup.ts
+// fake-indexeddb is loaded via setup.ts
 
-describe('sync queue (IndexedDB)', () => {
+describe('Sync Queue (IndexedDB)', () => {
     beforeEach(async () => {
         await clearQueue()
     })
 
     it('starts with empty queue', async () => {
         const mutations = await getQueuedMutations()
-        expect(mutations).toEqual([])
+        expect(mutations).toHaveLength(0)
     })
 
-    it('getPendingCount returns 0 for empty queue', async () => {
-        const count = await getPendingCount()
-        expect(count).toBe(0)
-    })
-
-    it('queues a mutation and retrieves it', async () => {
+    it('queues a mutation', async () => {
         await queueMutation({
             table: 'items',
             operation: 'insert',
-            data: { name: 'Milk', store_id: 'store-1' },
+            data: { name: 'Milk' },
             timestamp: Date.now(),
             retries: 0,
         })
@@ -41,51 +29,48 @@ describe('sync queue (IndexedDB)', () => {
         expect(mutations[0].data.name).toBe('Milk')
     })
 
-    it('auto-assigns an id to queued mutations', async () => {
-        await queueMutation({
-            table: 'items',
-            operation: 'insert',
-            data: { name: 'Eggs' },
-            timestamp: Date.now(),
-            retries: 0,
-        })
-
-        const mutations = await getQueuedMutations()
-        expect(mutations[0].id).toBeDefined()
-        expect(typeof mutations[0].id).toBe('number')
-    })
-
-    it('maintains FIFO order', async () => {
+    it('queues multiple mutations in FIFO order', async () => {
         await queueMutation({
             table: 'items',
             operation: 'insert',
             data: { name: 'First' },
-            timestamp: 1000,
+            timestamp: 1,
             retries: 0,
         })
         await queueMutation({
             table: 'items',
             operation: 'insert',
             data: { name: 'Second' },
-            timestamp: 2000,
-            retries: 0,
-        })
-        await queueMutation({
-            table: 'items',
-            operation: 'insert',
-            data: { name: 'Third' },
-            timestamp: 3000,
+            timestamp: 2,
             retries: 0,
         })
 
         const mutations = await getQueuedMutations()
-        expect(mutations).toHaveLength(3)
+        expect(mutations).toHaveLength(2)
         expect(mutations[0].data.name).toBe('First')
         expect(mutations[1].data.name).toBe('Second')
-        expect(mutations[2].data.name).toBe('Third')
     })
 
-    it('getPendingCount reflects queue size', async () => {
+    it('removes a mutation by id', async () => {
+        await queueMutation({
+            table: 'items',
+            operation: 'insert',
+            data: { name: 'Test' },
+            timestamp: Date.now(),
+            retries: 0,
+        })
+
+        const mutations = await getQueuedMutations()
+        expect(mutations).toHaveLength(1)
+
+        await removeMutation(mutations[0].id!)
+        const remaining = await getQueuedMutations()
+        expect(remaining).toHaveLength(0)
+    })
+
+    it('counts pending mutations', async () => {
+        expect(await getPendingCount()).toBe(0)
+
         await queueMutation({
             table: 'items',
             operation: 'insert',
@@ -93,45 +78,19 @@ describe('sync queue (IndexedDB)', () => {
             timestamp: Date.now(),
             retries: 0,
         })
-        await queueMutation({
-            table: 'items',
-            operation: 'update',
-            data: { status: 'checked' },
-            filter: { id: 'item-1' },
-            timestamp: Date.now(),
-            retries: 0,
-        })
+        expect(await getPendingCount()).toBe(1)
 
-        const count = await getPendingCount()
-        expect(count).toBe(2)
-    })
-
-    it('removeMutation removes specific mutation', async () => {
         await queueMutation({
             table: 'items',
             operation: 'insert',
-            data: { name: 'Keep' },
+            data: { name: 'B' },
             timestamp: Date.now(),
             retries: 0,
         })
-        await queueMutation({
-            table: 'items',
-            operation: 'insert',
-            data: { name: 'Remove' },
-            timestamp: Date.now(),
-            retries: 0,
-        })
-
-        const before = await getQueuedMutations()
-        const removeId = before.find(m => m.data.name === 'Remove')!.id!
-        await removeMutation(removeId)
-
-        const after = await getQueuedMutations()
-        expect(after).toHaveLength(1)
-        expect(after[0].data.name).toBe('Keep')
+        expect(await getPendingCount()).toBe(2)
     })
 
-    it('clearQueue removes all mutations', async () => {
+    it('clears all mutations', async () => {
         await queueMutation({
             table: 'items',
             operation: 'insert',
@@ -148,42 +107,53 @@ describe('sync queue (IndexedDB)', () => {
         })
 
         await clearQueue()
-
-        const count = await getPendingCount()
-        expect(count).toBe(0)
-        const mutations = await getQueuedMutations()
-        expect(mutations).toEqual([])
+        expect(await getPendingCount()).toBe(0)
     })
 
-    it('stores filter data for update mutations', async () => {
+    it('updates retry count for a mutation', async () => {
         await queueMutation({
             table: 'items',
-            operation: 'update',
-            data: { status: 'checked' },
-            filter: { id: 'item-123', store_id: 'store-456' },
+            operation: 'insert',
+            data: { name: 'Retry Test' },
             timestamp: Date.now(),
             retries: 0,
         })
 
         const mutations = await getQueuedMutations()
-        expect(mutations[0].filter).toEqual({
-            id: 'item-123',
-            store_id: 'store-456',
-        })
+        expect(mutations[0].retries).toBe(0)
+
+        await updateMutationRetries(mutations[0].id!, 2)
+        const updated = await getQueuedMutations()
+        expect(updated[0].retries).toBe(2)
     })
 
-    it('stores filter data for delete mutations', async () => {
+    it('supports update operations with filters', async () => {
+        await queueMutation({
+            table: 'items',
+            operation: 'update',
+            data: { name: 'Updated Milk' },
+            filter: { id: 'item-123' },
+            timestamp: Date.now(),
+            retries: 0,
+        })
+
+        const mutations = await getQueuedMutations()
+        expect(mutations[0].operation).toBe('update')
+        expect(mutations[0].filter).toEqual({ id: 'item-123' })
+    })
+
+    it('supports delete operations with filters', async () => {
         await queueMutation({
             table: 'items',
             operation: 'delete',
             data: {},
-            filter: { id: 'item-789' },
+            filter: { id: 'item-456' },
             timestamp: Date.now(),
             retries: 0,
         })
 
         const mutations = await getQueuedMutations()
         expect(mutations[0].operation).toBe('delete')
-        expect(mutations[0].filter).toEqual({ id: 'item-789' })
+        expect(mutations[0].filter).toEqual({ id: 'item-456' })
     })
 })

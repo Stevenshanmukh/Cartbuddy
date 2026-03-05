@@ -12,17 +12,36 @@ AS $$
   WHERE user_id = auth.uid()
 $$;
 
+-- Helper function: check if user has elevated role in a household
+CREATE OR REPLACE FUNCTION is_household_admin_or_owner(h_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM household_members
+    WHERE household_id = h_id
+      AND user_id = auth.uid()
+      AND role IN ('owner', 'admin')
+  )
+$$;
+
 -- =============================================
 -- PROFILES
 -- =============================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+-- Members can read profiles of users in their households
 CREATE POLICY "Users can read profiles in their household"
   ON profiles FOR SELECT
   USING (id IN (
     SELECT user_id FROM household_members
     WHERE household_id IN (SELECT get_my_household_ids())
   ));
+
+-- Users can always read their own profile
+CREATE POLICY "Users can read own profile"
+  ON profiles FOR SELECT
+  USING (id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can insert own profile"
   ON profiles FOR INSERT
@@ -37,16 +56,15 @@ CREATE POLICY "Users can update own profile"
 -- =============================================
 ALTER TABLE households ENABLE ROW LEVEL SECURITY;
 
--- Members can view their household
+-- Members can view their households
 CREATE POLICY "Members can view their household"
   ON households FOR SELECT
   USING (id IN (SELECT get_my_household_ids()));
 
--- Allow anyone to look up household by invite_code (for join flow)
-CREATE POLICY "Anyone can lookup household by invite code"
+-- Creator can always view their own household (needed for INSERT...RETURNING)
+CREATE POLICY "Creator can view own household"
   ON households FOR SELECT
-  USING (true);
-  -- Note: client queries should filter by invite_code to avoid leaking data
+  USING (created_by = (SELECT auth.uid()));
 
 CREATE POLICY "Authenticated users can create households"
   ON households FOR INSERT
@@ -69,6 +87,11 @@ CREATE POLICY "Members can view their household members"
   ON household_members FOR SELECT
   USING (household_id IN (SELECT get_my_household_ids()));
 
+-- Users can always view their own memberships (bootstrap case)
+CREATE POLICY "Users can view own memberships"
+  ON household_members FOR SELECT
+  USING (user_id = (SELECT auth.uid()));
+
 CREATE POLICY "Users can join a household (insert themselves)"
   ON household_members FOR INSERT
   WITH CHECK (user_id = (SELECT auth.uid()));
@@ -77,14 +100,56 @@ CREATE POLICY "Users can leave (delete themselves)"
   ON household_members FOR DELETE
   USING (user_id = (SELECT auth.uid()));
 
--- Owner can remove members
-CREATE POLICY "Owner can remove members"
+-- Owner/Admin can remove members
+CREATE POLICY "Owner or admin can remove members"
   ON household_members FOR DELETE
+  USING (is_household_admin_or_owner(household_id));
+
+-- Owner can update member roles
+CREATE POLICY "Owner can update member roles"
+  ON household_members FOR UPDATE
   USING (
     household_id IN (
-      SELECT id FROM households WHERE created_by = (SELECT auth.uid())
+      SELECT hm.household_id FROM household_members hm
+      WHERE hm.user_id = (SELECT auth.uid()) AND hm.role = 'owner'
     )
   );
+
+-- =============================================
+-- INVITES
+-- =============================================
+ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
+
+-- Members can view invites for their households
+CREATE POLICY "Members can view invites for their households"
+  ON invites FOR SELECT
+  USING (household_id IN (SELECT get_my_household_ids()));
+
+-- Allow looking up invites by token (for join flow — scoped to token lookup)
+CREATE POLICY "Anyone can lookup invite by token"
+  ON invites FOR SELECT
+  USING (true);
+  -- Client queries MUST filter by token. RLS allows reading but
+  -- the token is a UUID that is not guessable.
+
+-- Owner/Admin can create invites
+CREATE POLICY "Owner or admin can create invites"
+  ON invites FOR INSERT
+  WITH CHECK (
+    created_by = (SELECT auth.uid())
+    AND is_household_admin_or_owner(household_id)
+  );
+
+-- Authenticated users can update invites (for use_count increment on join)
+-- Admin actions are validated in server actions
+CREATE POLICY "Authenticated users can update invites"
+  ON invites FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL);
+
+-- Owner/Admin can delete invites
+CREATE POLICY "Owner or admin can delete invites"
+  ON invites FOR DELETE
+  USING (is_household_admin_or_owner(household_id));
 
 -- =============================================
 -- STORES
@@ -131,8 +196,7 @@ CREATE POLICY "Members can view items"
 CREATE POLICY "Members can add items"
   ON items FOR INSERT
   WITH CHECK (
-    created_by = (SELECT auth.uid())
-    AND store_id IN (
+    store_id IN (
       SELECT id FROM stores
       WHERE household_id IN (SELECT get_my_household_ids())
     )

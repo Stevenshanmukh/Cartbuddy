@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) =>
+                    cookiesToSet.forEach(({ name, value }) =>
                         request.cookies.set(name, value)
                     )
                     supabaseResponse = NextResponse.next({
@@ -34,8 +34,9 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // Protected routes: redirect to landing if not authenticated
+    // Protected routes: redirect to login if not authenticated
     const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
+        request.nextUrl.pathname.startsWith('/households') ||
         request.nextUrl.pathname.startsWith('/store') ||
         request.nextUrl.pathname.startsWith('/shop') ||
         request.nextUrl.pathname.startsWith('/activity') ||
@@ -43,25 +44,26 @@ export async function updateSession(request: NextRequest) {
 
     if (isProtectedRoute && !user) {
         const url = request.nextUrl.clone()
-        url.pathname = '/'
+        url.pathname = '/login'
+        url.searchParams.set('redirect', request.nextUrl.pathname)
         return NextResponse.redirect(url)
     }
 
-    // If user is authenticated and on landing, redirect to dashboard
-    if (user && request.nextUrl.pathname === '/') {
-        // Check if user has a household
-        const { data: membership } = await supabase
-            .from('household_members')
-            .select('household_id')
-            .eq('user_id', user.id)
-            .limit(1)
-            .single()
+    // Auth routes: redirect to households if already logged in
+    const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/signup')
 
-        if (membership) {
-            const url = request.nextUrl.clone()
-            url.pathname = '/dashboard'
-            return NextResponse.redirect(url)
-        }
+    if (isAuthRoute && user) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/households'
+        return NextResponse.redirect(url)
+    }
+
+    // Landing page: redirect to households if logged in
+    if (user && request.nextUrl.pathname === '/') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/households'
+        return NextResponse.redirect(url)
     }
 
     return supabaseResponse

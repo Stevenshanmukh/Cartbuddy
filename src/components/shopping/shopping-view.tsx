@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { useRealtimeItems } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
+import confetti from 'canvas-confetti'
 
 interface ShoppingViewProps {
     storeId: string
@@ -17,10 +19,27 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
     const { items, isLoading, checkItem, uncheckItem, archiveChecked } = useItems(storeId, householdId, storeName)
     useRealtimeItems(storeId)
 
-    const activeItems = items.filter((i: any) => i.status === 'active')
-    const checkedItems = items.filter((i: any) => i.status === 'checked')
+    const activeItems = useMemo(() => items.filter((i: any) => i.status === 'active'), [items])
+    const checkedItems = useMemo(() => items.filter((i: any) => i.status === 'checked'), [items])
     const totalItems = activeItems.length + checkedItems.length
-    const progress = totalItems > 0 ? (checkedItems.length / totalItems) * 100 : 0
+    const progress = useMemo(() => totalItems > 0 ? (checkedItems.length / totalItems) * 100 : 0, [totalItems, checkedItems.length])
+
+    const hasFiredConfetti = useRef(false)
+
+    useEffect(() => {
+        if (totalItems > 0 && activeItems.length === 0 && !hasFiredConfetti.current) {
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.5 },
+                colors: ['#22c55e', '#3b82f6', '#eab308', '#ec4899', '#a855f7'],
+                disableForReducedMotion: true
+            })
+            hasFiredConfetti.current = true
+        } else if (activeItems.length > 0 && hasFiredConfetti.current) {
+            hasFiredConfetti.current = false
+        }
+    }, [totalItems, activeItems.length])
 
     const handleCheck = useCallback((id: string) => {
         checkItem.mutate(id)
@@ -95,30 +114,36 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                         {activeItems.length > 0 && (
                             <div className="px-4 pt-4 pb-2">
                                 <div className="space-y-2">
-                                    {activeItems.map((item: any) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => handleCheck(item.id)}
-                                            className="w-full flex items-center gap-4 bg-gray-900 rounded-2xl p-4 active:bg-gray-800 transition-colors group"
-                                        >
-                                            <div className="w-8 h-8 rounded-full border-2 border-gray-600 flex-shrink-0 group-hover:border-green-500 transition-colors" />
-                                            <div className="flex-1 text-left min-w-0">
-                                                <p className="text-white font-medium text-base truncate">
-                                                    {item.name}
-                                                </p>
-                                                {item.quantity && (
-                                                    <p className="text-gray-500 text-sm mt-0.5">
-                                                        Qty: {item.quantity}
+                                    <AnimatePresence initial={false}>
+                                        {activeItems.map((item: any) => (
+                                            <motion.button
+                                                layout
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                                                key={item.id}
+                                                onClick={() => handleCheck(item.id)}
+                                                className="w-full flex items-center gap-4 bg-gray-900 rounded-2xl p-4 active:bg-gray-800 transition-colors group"
+                                            >
+                                                <div className="w-8 h-8 rounded-full border-2 border-gray-600 flex-shrink-0 group-hover:border-green-500 transition-colors" />
+                                                <div className="flex-1 text-left min-w-0">
+                                                    <p className="text-white font-medium text-base truncate">
+                                                        {item.name}
+                                                    </p>
+                                                    {item.quantity && (
+                                                        <p className="text-gray-500 text-sm mt-0.5">
+                                                            Qty: {item.quantity}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {item.notes && (
+                                                    <p className="text-gray-600 text-xs max-w-[100px] truncate">
+                                                        {item.notes}
                                                     </p>
                                                 )}
-                                            </div>
-                                            {item.notes && (
-                                                <p className="text-gray-600 text-xs max-w-[100px] truncate">
-                                                    {item.notes}
-                                                </p>
-                                            )}
-                                        </button>
-                                    ))}
+                                            </motion.button>
+                                        ))}
+                                    </AnimatePresence>
                                 </div>
                             </div>
                         )}
@@ -130,23 +155,30 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                                     In Cart ({checkedItems.length})
                                 </h3>
                                 <div className="space-y-1.5">
-                                    {checkedItems.map((item: any) => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => handleUncheck(item.id)}
-                                            className="w-full flex items-center gap-4 bg-gray-900/50 rounded-2xl p-4 active:bg-gray-800 transition-colors opacity-50"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                                </svg>
-                                            </div>
-                                            <p className="text-gray-500 font-medium text-base line-through truncate text-left">
-                                                {item.name}
-                                                {item.quantity && <span className="text-gray-600 ml-1.5">× {item.quantity}</span>}
-                                            </p>
-                                        </button>
-                                    ))}
+                                    <AnimatePresence initial={false}>
+                                        {checkedItems.map((item: any) => (
+                                            <motion.button
+                                                layout
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 0.5, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                                                whileHover={{ opacity: 0.7 }}
+                                                key={item.id}
+                                                onClick={() => handleUncheck(item.id)}
+                                                className="w-full flex items-center gap-4 bg-gray-900/50 rounded-2xl p-4 transition-colors"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                    </svg>
+                                                </div>
+                                                <p className="text-gray-500 font-medium text-base line-through truncate text-left">
+                                                    {item.name}
+                                                    {item.quantity && <span className="text-gray-600 ml-1.5">× {item.quantity}</span>}
+                                                </p>
+                                            </motion.button>
+                                        ))}
+                                    </AnimatePresence>
                                 </div>
                             </div>
                         )}

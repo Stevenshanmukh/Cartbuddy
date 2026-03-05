@@ -35,6 +35,7 @@ export const ITEM_STATUS = {
 // Member roles
 export const MEMBER_ROLE = {
     OWNER: 'owner',
+    ADMIN: 'admin',
     MEMBER: 'member',
 } as const
 

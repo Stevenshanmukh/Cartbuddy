@@ -8,10 +8,10 @@ import { createClient } from '@/lib/supabase/client'
  * Fire-and-forget — does not throw on failure.
  */
 async function logActivity(
-    supabase: any,
+    supabase: ReturnType<typeof createClient>,
     householdId: string,
     action: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, string | number | boolean | null | undefined>
 ) {
     try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -67,7 +67,7 @@ export function useItems(storeId: string, householdId?: string, storeName?: stri
             name: string
             quantity?: string
             notes?: string
-            category_id?: number
+            category_id?: number | null
         }) => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
@@ -97,7 +97,33 @@ export function useItems(storeId: string, householdId?: string, storeName?: stri
 
             return data
         },
-        onSuccess: () => {
+        onMutate: async (newItem) => {
+            await queryClient.cancelQueries({ queryKey: ['items', storeId] })
+            const prev = queryClient.getQueryData(['items', storeId])
+
+            queryClient.setQueryData(['items', storeId], (old: any[] = []) => [
+                ...old,
+                {
+                    // Generate a fake ID for the optimistic item
+                    id: `temp-${Date.now()}`,
+                    store_id: storeId,
+                    name: newItem.name.trim(),
+                    quantity: newItem.quantity?.trim() || null,
+                    notes: newItem.notes?.trim() || null,
+                    category_id: newItem.category_id || null,
+                    status: 'active',
+                    created_at: new Date().toISOString(),
+                    // A real created_by name won't be easily available here, but we can fake it or omit it
+                    profiles: null,
+                }
+            ])
+
+            return { prev }
+        },
+        onError: (_err, _newItem, context) => {
+            queryClient.setQueryData(['items', storeId], context?.prev)
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['items', storeId] })
         },
     })
@@ -121,7 +147,22 @@ export function useItems(storeId: string, householdId?: string, storeName?: stri
             if (error) throw error
             return data
         },
-        onSuccess: () => {
+        onMutate: async (updates) => {
+            await queryClient.cancelQueries({ queryKey: ['items', storeId] })
+            const prev = queryClient.getQueryData(['items', storeId])
+
+            queryClient.setQueryData(['items', storeId], (old: any[] = []) =>
+                old.map(item =>
+                    item.id === updates.id ? { ...item, ...updates } : item
+                )
+            )
+
+            return { prev }
+        },
+        onError: (_err, _updates, context) => {
+            queryClient.setQueryData(['items', storeId], context?.prev)
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['items', storeId] })
         },
     })

@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
-import { getQueuedMutations, removeMutation, type QueuedMutation } from './queue'
+import { getQueuedMutations, removeMutation, updateMutationRetries, type QueuedMutation } from './queue'
 
 const MAX_RETRIES = 3
 
@@ -31,12 +31,15 @@ export async function processQueue(): Promise<{
         } catch (error) {
             console.error(`[Sync] Failed to replay mutation ${mutation.id}:`, error)
 
-            if (mutation.retries >= MAX_RETRIES) {
+            const newRetries = mutation.retries + 1
+            if (newRetries >= MAX_RETRIES) {
                 // Give up after max retries — remove from queue
                 await removeMutation(mutation.id!)
                 failed++
                 console.warn(`[Sync] Dropped mutation ${mutation.id} after ${MAX_RETRIES} retries`)
             } else {
+                // Persist incremented retry count
+                await updateMutationRetries(mutation.id!, newRetries)
                 failed++
             }
         }

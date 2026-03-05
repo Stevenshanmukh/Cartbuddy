@@ -90,6 +90,27 @@ export async function getPendingCount(): Promise<number> {
 }
 
 /**
+ * Update the retry count for a mutation.
+ */
+export async function updateMutationRetries(id: number, retries: number): Promise<void> {
+    const db = await openDB()
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite')
+        const store = tx.objectStore(STORE_NAME)
+        const getReq = store.get(id)
+        getReq.onsuccess = () => {
+            const mutation = getReq.result
+            if (mutation) {
+                mutation.retries = retries
+                store.put(mutation)
+            }
+        }
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+    })
+}
+
+/**
  * Clear all queued mutations (e.g., after full sync).
  */
 export async function clearQueue(): Promise<void> {

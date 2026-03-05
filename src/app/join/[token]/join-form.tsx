@@ -36,7 +36,6 @@ export function JoinForm({ householdName, householdId, inviteCode }: JoinFormPro
             // 1. Sign in anonymously (client-side)
             const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
             if (authError || !authData.user) {
-                console.error('Auth error:', authError)
                 setError('Failed to create account. Please try again.')
                 setLoading(false)
                 return
@@ -50,7 +49,6 @@ export function JoinForm({ householdName, householdId, inviteCode }: JoinFormPro
                 .insert({ id: userId, name: userName })
 
             if (profileError) {
-                console.error('Profile error:', profileError)
                 setError('Failed to create profile.')
                 setLoading(false)
                 return
@@ -66,7 +64,6 @@ export function JoinForm({ householdName, householdId, inviteCode }: JoinFormPro
                 })
 
             if (memberError) {
-                console.error('Member error:', memberError)
                 if (memberError.code === '23505') {
                     setError('You are already a member of this household.')
                 } else {
@@ -88,7 +85,6 @@ export function JoinForm({ householdName, householdId, inviteCode }: JoinFormPro
             router.push('/dashboard')
             router.refresh()
         } catch (err) {
-            console.error('Unexpected error:', err)
             setError('Something went wrong. Please try again.')
             setLoading(false)
         }
