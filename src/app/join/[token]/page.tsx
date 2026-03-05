@@ -19,6 +19,8 @@ export default async function JoinPage({ params }: JoinPageProps) {
     }
 
     // Look up invite by token
+    // Note: The households() join may return null if the user isn't a member yet
+    // because households RLS restricts SELECT to members. We handle this gracefully.
     const { data: invite } = await supabase
         .from('invites')
         .select('id, household_id, expires_at, max_uses, use_count, is_active, households(id, name)')
@@ -84,7 +86,10 @@ export default async function JoinPage({ params }: JoinPageProps) {
         redirect('/households')
     }
 
+    // Get household name — the embedded join may return null due to RLS
+    // (user isn't a member yet, so households SELECT policy blocks it)
     const household = (invite as any).households
+    const householdName = household?.name || 'a household'
 
-    return <JoinConfirm householdName={household.name} token={token} />
+    return <JoinConfirm householdName={householdName} token={token} />
 }
