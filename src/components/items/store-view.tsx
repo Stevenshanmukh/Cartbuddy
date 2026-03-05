@@ -11,6 +11,8 @@ import { UndoToast } from '@/components/ui/undo-toast'
 import { StoreItemsSkeleton } from '@/components/ui/skeletons'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { deleteStore } from '@/app/actions/store'
+import { useTransition } from 'react'
 
 interface StoreViewProps {
     storeId: string
@@ -33,6 +35,8 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
     const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
     const [undoAction, setUndoAction] = useState<any>(null)
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+    const [isDeleting, startTransition] = useTransition()
     const categoryMap = useMemo(() => new Map((categories || []).map((c: any) => [c.id, c.name])), [categories])
 
     const activeItems = useMemo(() => items.filter((i: any) => i.status === 'active'), [items])
@@ -106,6 +110,18 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
         })
     }, [])
 
+    const handleDeleteStore = useCallback(() => {
+        startTransition(async () => {
+            const result = await deleteStore(storeId, householdId)
+            if (result?.error) {
+                console.error(result.error)
+            } else {
+                setIsDeleteDialogOpen(false)
+                router.push('/dashboard')
+            }
+        })
+    }, [storeId, householdId, router])
+
     if (isLoading && items.length === 0) {
         return <StoreItemsSkeleton />
     }
@@ -126,6 +142,14 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
                 <span className="text-sm text-gray-400">
                     {activeItems.length} item{activeItems.length !== 1 ? 's' : ''}
                 </span>
+                <button
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                </button>
             </div>
 
             {/* Loading */}
@@ -268,6 +292,48 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
                     onTimeout={() => setUndoAction(null)}
                 />
             )}
+
+            {/* Delete Store Dialog */}
+            <AnimatePresence>
+                {isDeleteDialogOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 overflow-hidden"
+                        >
+                            <div className="flex items-center gap-3 mb-4 text-red-600">
+                                <span className="p-2 bg-red-100 rounded-full">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </span>
+                                <h3 className="text-lg font-bold text-gray-900">Delete Store?</h3>
+                            </div>
+                            <p className="text-gray-500 mb-6 font-medium">
+                                Are you sure you want to delete <span className="font-bold text-gray-900">{storeName}</span>? All items inside will be permanently deleted. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    onClick={() => setIsDeleteDialogOpen(false)}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteStore}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center min-w-[5rem]"
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }
