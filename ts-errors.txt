@@ -1,2 +1,0 @@
-﻿.next/types/validator.ts(80,39): error TS2307: Cannot find module '../../src/app/(app)/households/page.js' or its corresponding type declarations.
-src/__tests__/components/quick-add-input.test.tsx(3,31): error TS2307: Cannot find module '@/components/items/quick-add-input' or its corresponding type declarations.

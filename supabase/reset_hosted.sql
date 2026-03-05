@@ -95,7 +95,7 @@ CREATE TABLE items (
 CREATE TABLE activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   action TEXT NOT NULL
     CHECK (action IN (
       'item_added', 'item_checked', 'item_unchecked',
@@ -178,6 +178,10 @@ CREATE POLICY "Members can view their household"
   ON households FOR SELECT
   USING (id IN (SELECT get_my_household_ids()));
 
+CREATE POLICY "Creator can view own household"
+  ON households FOR SELECT
+  USING (created_by = (SELECT auth.uid()));
+
 CREATE POLICY "Authenticated users can create households"
   ON households FOR INSERT
   WITH CHECK (created_by = (SELECT auth.uid()));
@@ -196,6 +200,10 @@ ALTER TABLE household_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Members can view their household members"
   ON household_members FOR SELECT
   USING (household_id IN (SELECT get_my_household_ids()));
+
+CREATE POLICY "Users can view own memberships"
+  ON household_members FOR SELECT
+  USING (user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can join a household (insert themselves)"
   ON household_members FOR INSERT

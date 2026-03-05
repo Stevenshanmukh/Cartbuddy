@@ -6,29 +6,6 @@ CartBuddy is a mobile-first PWA that lets roommates, families, and households ma
 
 ---
 
-## 📸 Screenshots
-
-*Placeholder for application screenshots. Replace the images in `public/screenshots/` before publishing.*
-
-<details>
-<summary>View Gallery</summary>
-
-| Login & Auth | Household Dashboard |
-|:---:|:---:|
-| <img src="public/screenshots/login.png" width="400" alt="Login screen" /> | <img src="public/screenshots/household.png" width="400" alt="Household Dashboard" /> |
-
-| Store Items | Active Shopping |
-|:---:|:---:|
-| <img src="public/screenshots/items.png" width="400" alt="Store Items" /> | <img src="public/screenshots/shopping.png" width="400" alt="Active Shopping Mode" /> |
-
-| Add Item Quick-Action | Activity Feed |
-|:---:|:---:|
-| <img src="public/screenshots/add-item.png" width="400" alt="Add Item Sheet" /> | <img src="public/screenshots/activity.png" width="400" alt="Live Activity Feed" /> |
-
-</details>
-
----
-
 ## ✨ Features
 
 - **Real-time sync** — Changes appear instantly across all household members
@@ -89,7 +66,7 @@ cp .env.example .env.local
 # Edit .env.local with your Supabase credentials
 
 # 3. Set up database
-# Run the SQL files in supabase/migrations/ (001 through 006) in your Supabase SQL Editor
+# Run the SQL files in supabase/migrations/ (001 through 007) in your Supabase SQL Editor
 
 # 4. Start dev server
 npm run dev
@@ -119,6 +96,7 @@ Run these migrations in order in the Supabase SQL Editor:
 | 4 | `004_seed_categories.sql` | Default shopping categories |
 | 5 | `005_transfer_ownership_rpc.sql` | Atomic ownership transfer + invite count |
 | 6 | `006_fix_invite_rls.sql` | Invite lookup policy |
+| 7 | `007_fix_database_audit.sql` | FK fix (activity logs), RLS hardening |
 
 ## 🧪 Testing
 

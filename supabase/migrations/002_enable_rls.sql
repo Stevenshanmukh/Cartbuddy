@@ -196,7 +196,8 @@ CREATE POLICY "Members can view items"
 CREATE POLICY "Members can add items"
   ON items FOR INSERT
   WITH CHECK (
-    store_id IN (
+    created_by = (SELECT auth.uid())
+    AND store_id IN (
       SELECT id FROM stores
       WHERE household_id IN (SELECT get_my_household_ids())
     )

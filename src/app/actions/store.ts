@@ -52,7 +52,7 @@ export async function deleteStore(storeId: string, householdId: string) {
         user_id: user.id,
         action: 'store_deleted',
         store_name: storeName,
-        metadata: { user_name: profile?.name || 'Unknown' }
+        metadata: { store_name: storeName, user_name: profile?.name || 'Unknown' }
     })
 
     revalidatePath('/dashboard')

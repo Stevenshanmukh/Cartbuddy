@@ -47,6 +47,7 @@ export function CreateStoreSheet({ isOpen, onOpenChange }: CreateStoreSheetProps
                 household_id: activeHouseholdId,
                 user_id: user.id,
                 action: 'store_created',
+                store_name: name.trim(),
                 metadata: { store_name: name.trim() }
             })
         }

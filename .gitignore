@@ -32,6 +32,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*-errors.txt
+*-output*.txt
+nextjs_log.txt
+test_rls.js
 
 # env files
 .env*

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { StoreView } from '@/components/items/store-view'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 interface StorePageProps {
     params: Promise<{ storeId: string }>
@@ -33,10 +34,12 @@ export default async function StorePage({ params }: StorePageProps) {
     if (!store) redirect('/dashboard')
 
     return (
-        <StoreView
-            storeId={store.id}
-            storeName={store.name}
-            householdId={store.household_id}
-        />
+        <ErrorBoundary>
+            <StoreView
+                storeId={store.id}
+                storeName={store.name}
+                householdId={store.household_id}
+            />
+        </ErrorBoundary>
     )
 }

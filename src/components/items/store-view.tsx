@@ -162,7 +162,7 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
                         </svg>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-1">No items yet</h3>
-                    <p className="text-gray-500 text-sm">Use the input below to add your first item</p>
+                    <p className="text-gray-500 text-sm">Tap the + button to add your first item</p>
                 </div>
             ) : (
                 <div className="px-4 py-4 space-y-4">
@@ -256,7 +256,7 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
             )}
 
             {/* Floating Add Button */}
-            <div className="fixed bottom-6 right-4 z-30">
+            <div className="fixed bottom-24 right-4 z-30">
                 <button
                     onClick={() => setIsAddSheetOpen(true)}
                     className="flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all"

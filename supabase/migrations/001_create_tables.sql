@@ -82,7 +82,7 @@ CREATE TABLE items (
 CREATE TABLE activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   action TEXT NOT NULL
     CHECK (action IN (
       'item_added', 'item_checked', 'item_unchecked',
