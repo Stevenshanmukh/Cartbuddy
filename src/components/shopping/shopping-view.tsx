@@ -55,27 +55,27 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
     }, [archiveChecked, router])
 
     return (
-        <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+        <div className="min-h-screen bg-white text-gray-900 flex flex-col">
             {/* Shopping Header */}
-            <div className="safe-area-top bg-gray-900/80 backdrop-blur-xl border-b border-gray-800 px-4 py-3">
+            <div className="safe-area-top bg-white/80 backdrop-blur-xl border-b border-gray-200 px-4 py-3">
                 <div className="flex items-center justify-between mb-3">
                     <button
                         onClick={() => router.push('/dashboard')}
-                        className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                        className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         <span className="text-sm font-medium">Exit</span>
                     </button>
-                    <h1 className="text-lg font-bold text-white">{storeName}</h1>
+                    <h1 className="text-lg font-bold text-gray-900">{storeName}</h1>
                     <span className="text-sm text-gray-400">
                         {checkedItems.length}/{totalItems}
                     </span>
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-green-500 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${progress}%` }}
@@ -94,12 +94,12 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                     </div>
                 ) : totalItems === 0 ? (
                     <div className="text-center py-20 px-4">
-                        <div className="w-20 h-20 bg-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-10 h-10 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <div className="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                             </svg>
                         </div>
-                        <h3 className="font-semibold text-white text-lg mb-1">List is empty</h3>
+                        <h3 className="font-semibold text-gray-900 text-lg mb-1">List is empty</h3>
                         <p className="text-gray-500">Add items in management mode first</p>
                         <button
                             onClick={() => router.push(`/store/${storeId}`)}
@@ -123,11 +123,11 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                                                 key={item.id}
                                                 onClick={() => handleCheck(item.id)}
-                                                className="w-full flex items-center gap-4 bg-gray-900 rounded-2xl p-4 active:bg-gray-800 transition-colors group"
+                                                className="w-full flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-2xl p-4 active:bg-gray-100 transition-colors group"
                                             >
-                                                <div className="w-8 h-8 rounded-full border-2 border-gray-600 flex-shrink-0 group-hover:border-green-500 transition-colors" />
+                                                <div className="w-8 h-8 rounded-full border-2 border-gray-300 flex-shrink-0 group-hover:border-green-500 transition-colors" />
                                                 <div className="flex-1 text-left min-w-0">
-                                                    <p className="text-white font-medium text-base truncate">
+                                                    <p className="text-gray-900 font-medium text-base truncate">
                                                         {item.name}
                                                     </p>
                                                     {item.quantity && (
@@ -137,7 +137,7 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                                                     )}
                                                 </div>
                                                 {item.notes && (
-                                                    <p className="text-gray-600 text-xs max-w-[100px] truncate">
+                                                    <p className="text-gray-400 text-xs max-w-[100px] truncate">
                                                         {item.notes}
                                                     </p>
                                                 )}
@@ -151,7 +151,7 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                         {/* Checked items */}
                         {checkedItems.length > 0 && (
                             <div className="px-4 py-2">
-                                <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 px-1">
+                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
                                     In Cart ({checkedItems.length})
                                 </h3>
                                 <div className="space-y-1.5">
@@ -160,21 +160,21 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
                                             <motion.button
                                                 layout
                                                 initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 0.5, y: 0 }}
+                                                animate={{ opacity: 0.6, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                                                whileHover={{ opacity: 0.7 }}
+                                                whileHover={{ opacity: 0.8 }}
                                                 key={item.id}
                                                 onClick={() => handleUncheck(item.id)}
-                                                className="w-full flex items-center gap-4 bg-gray-900/50 rounded-2xl p-4 transition-colors"
+                                                className="w-full flex items-center gap-4 bg-green-50 border border-green-100 rounded-2xl p-4 transition-colors"
                                             >
                                                 <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
                                                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                                     </svg>
                                                 </div>
-                                                <p className="text-gray-500 font-medium text-base line-through truncate text-left">
+                                                <p className="text-gray-400 font-medium text-base line-through truncate text-left">
                                                     {item.name}
-                                                    {item.quantity && <span className="text-gray-600 ml-1.5">× {item.quantity}</span>}
+                                                    {item.quantity && <span className="text-gray-300 ml-1.5">× {item.quantity}</span>}
                                                 </p>
                                             </motion.button>
                                         ))}
@@ -188,14 +188,14 @@ export function ShoppingView({ storeId, storeName, householdId }: ShoppingViewPr
 
             {/* Bottom action bar */}
             {checkedItems.length > 0 && (
-                <div className="safe-area-bottom bg-gray-900/80 backdrop-blur-xl border-t border-gray-800 px-4 py-4">
+                <div className="safe-area-bottom bg-white/80 backdrop-blur-xl border-t border-gray-200 px-4 py-4">
                     <button
                         onClick={handleDone}
                         className={cn(
                             'w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-[0.98]',
                             progress >= 100
                                 ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                : 'bg-gray-800 text-green-400 border border-green-500/30'
+                                : 'bg-green-50 text-green-600 border border-green-200'
                         )}
                     >
                         {progress >= 100 ? '🎉 All Done — Archive Items' : `Done Shopping (${checkedItems.length} items)`}
