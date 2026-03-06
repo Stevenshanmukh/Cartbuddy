@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Drawer } from 'vaul'
 import { useCategories } from '@/hooks/use-items'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface AddItemSheetProps {
     isOpen: boolean
@@ -10,37 +11,82 @@ interface AddItemSheetProps {
     isAdding?: boolean
 }
 
-export function AddItemSheet({ isOpen, onOpenChange, onSave, isAdding }: AddItemSheetProps) {
+export function AddItemSheet({ isOpen, onOpenChange, onSave }: AddItemSheetProps) {
     const [name, setName] = useState('')
     const [quantity, setQuantity] = useState('')
     const [notes, setNotes] = useState('')
     const [categoryId, setCategoryId] = useState<number | null>(null)
+    const [showSuccess, setShowSuccess] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const { data: categories } = useCategories()
+    const inputRef = useRef<HTMLInputElement>(null)
+    const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const submitGuardRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Focus the name input when the drawer opens
+    useEffect(() => {
+        if (isOpen) {
+            // Small delay to let the drawer animate in before focusing
+            const timer = setTimeout(() => {
+                inputRef.current?.focus()
+            }, 350)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
+
+    // Cleanup timers on unmount
+    useEffect(() => {
+        return () => {
+            if (successTimerRef.current) clearTimeout(successTimerRef.current)
+            if (submitGuardRef.current) clearTimeout(submitGuardRef.current)
+        }
+    }, [])
+
+    const resetForm = useCallback(() => {
+        setName('')
+        setQuantity('')
+        setNotes('')
+        setCategoryId(null)
+    }, [])
 
     function handleOpenChange(open: boolean) {
         if (!open) {
-            setTimeout(() => {
-                setName('')
-                setQuantity('')
-                setNotes('')
-                setCategoryId(null)
-            }, 300)
+            resetForm()
+            setShowSuccess(false)
+            setIsSubmitting(false)
         }
         onOpenChange(open)
     }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
-        if (!name.trim() || isAdding) return
+        const trimmedName = name.trim()
+        if (!trimmedName || isSubmitting) return
+
+        // Brief submission guard to prevent accidental double-taps (150ms)
+        setIsSubmitting(true)
 
         onSave({
-            name: name.trim(),
+            name: trimmedName,
             quantity: quantity.trim() || undefined,
             notes: notes.trim() || undefined,
             category_id: categoryId,
         })
 
-        onOpenChange(false)
+        // Immediately reset form for next item — keep drawer open
+        resetForm()
+
+        // Show success indicator
+        setShowSuccess(true)
+        if (successTimerRef.current) clearTimeout(successTimerRef.current)
+        successTimerRef.current = setTimeout(() => setShowSuccess(false), 500)
+
+        // Release submit guard after a short delay (allows rapid adding but prevents double-tap)
+        if (submitGuardRef.current) clearTimeout(submitGuardRef.current)
+        submitGuardRef.current = setTimeout(() => setIsSubmitting(false), 150)
+
+        // Re-focus the name input for rapid adding
+        setTimeout(() => inputRef.current?.focus(), 50)
     }
 
     return (
@@ -50,10 +96,27 @@ export function AddItemSheet({ isOpen, onOpenChange, onSave, isAdding }: AddItem
                 <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
                     <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-4 mt-4" />
 
-                    <div className="max-w-md w-full mx-auto flex-1 overflow-y-auto w-full">
+                    <div className="max-w-md w-full mx-auto flex-1 overflow-y-auto">
                         <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-5">
                             <div className="flex items-center justify-between">
                                 <Drawer.Title className="font-bold text-xl text-gray-900">Add Item</Drawer.Title>
+                                {/* Success indicator */}
+                                <AnimatePresence>
+                                    {showSuccess && (
+                                        <motion.span
+                                            initial={{ opacity: 0, scale: 0.8, y: 4 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.8, y: -4 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="text-sm font-semibold text-green-600 flex items-center gap-1"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            Added!
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <div>
@@ -61,12 +124,12 @@ export function AddItemSheet({ isOpen, onOpenChange, onSave, isAdding }: AddItem
                                     Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
+                                    ref={inputRef}
                                     id="addName"
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    required
-                                    autoFocus
+                                    autoComplete="off"
                                     maxLength={100}
                                     placeholder="e.g. Organic Milk"
                                     className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-gray-900 text-lg"
@@ -125,21 +188,21 @@ export function AddItemSheet({ isOpen, onOpenChange, onSave, isAdding }: AddItem
                                 <button
                                     type="button"
                                     onClick={() => handleOpenChange(false)}
-                                    className="flex-1 py-4 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                                    className="flex-1 py-4 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-colors active:scale-[0.98]"
                                 >
-                                    Cancel
+                                    Done
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={!name.trim() || isAdding}
+                                    disabled={!name.trim()}
                                     className={cn(
                                         "flex-1 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm",
-                                        name.trim() && !isAdding
+                                        name.trim()
                                             ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/30"
                                             : "bg-gray-100 text-gray-400 cursor-not-allowed"
                                     )}
                                 >
-                                    {isAdding ? 'Saving...' : 'Save Item'}
+                                    Add Item
                                 </button>
                             </div>
                         </form>
