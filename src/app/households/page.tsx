@@ -23,7 +23,7 @@ export default async function HouseholdsPage() {
 
     // Get member counts
     const householdIds = memberships?.map(m => m.household_id) || []
-    let countMap: Record<string, number> = {}
+    const countMap: Record<string, number> = {}
 
     if (householdIds.length > 0) {
         const { data: memberCounts } = await supabase

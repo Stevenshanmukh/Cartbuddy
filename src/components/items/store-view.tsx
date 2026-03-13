@@ -278,6 +278,7 @@ export function StoreView({ storeId, storeName, householdId }: StoreViewProps) {
 
             {/* Edit Item Drawer */}
             <EditItemDrawer
+                key={editingItem?.id}
                 item={editingItem}
                 onSave={(id, updates) => updateItem.mutate({ id, ...updates })}
                 onDelete={(id) => deleteItem.mutate(id)}

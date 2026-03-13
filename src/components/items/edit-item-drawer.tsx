@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Drawer } from 'vaul'
 import { useCategories } from '@/hooks/use-items'
 
@@ -18,20 +18,11 @@ interface EditItemDrawerProps {
 }
 
 export function EditItemDrawer({ item, onSave, onDelete, onClose }: EditItemDrawerProps) {
-    const [name, setName] = useState('')
-    const [quantity, setQuantity] = useState('')
-    const [notes, setNotes] = useState('')
-    const [categoryId, setCategoryId] = useState<number | null>(null)
+    const [name, setName] = useState(item?.name ?? '')
+    const [quantity, setQuantity] = useState(item?.quantity ?? '')
+    const [notes, setNotes] = useState(item?.notes ?? '')
+    const [categoryId, setCategoryId] = useState<number | null>(item?.category_id ?? null)
     const { data: categories } = useCategories()
-
-    useEffect(() => {
-        if (item) {
-            setName(item.name)
-            setQuantity(item.quantity || '')
-            setNotes(item.notes || '')
-            setCategoryId(item.category_id || null)
-        }
-    }, [item])
 
     if (!item) return null
 
